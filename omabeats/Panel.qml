@@ -199,8 +199,27 @@ Panel {
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
-      onCloseRequested: root.close()
+      onCloseRequested: {
+        if (root.showAboutModal) {
+          root.showAboutModal = false
+        } else {
+          root.close()
+        }
+      }
       onTabRequested: function(direction) { root.switchPanel(direction) }
+      onTextKey: function(t) {
+        if (t === "r" || t === "R") {
+          root.refresh()
+        } else if (t === "a" || t === "A") {
+          root.showAboutModal = !root.showAboutModal
+        } else if (t === "1") {
+          root.setNoiseControl("anc")
+        } else if (t === "2") {
+          root.setNoiseControl("off")
+        } else if (t === "3") {
+          root.setNoiseControl("transparency")
+        }
+      }
 
       Flickable {
         id: panelFlick
@@ -872,8 +891,8 @@ Panel {
               spacing: Style.space(8)
 
               Button {
-                text: "About"
                 iconText: "󰋽"
+                tooltipText: "About & Imprint"
                 bordered: true
                 foreground: root.foreground
                 accent: root.accent
@@ -955,7 +974,7 @@ Panel {
           }
 
           Text {
-            text: "Surum: 1.1.0\nGelistirici: Ozan Ozdil (@ozdil)\nLisans: MIT\nApple Beats ve W1/H1 Donanim Yonetim Modulu"
+            text: "Version: 1.1.0\nDeveloper: Ozan Ozdil (@ozdil)\nLicense: MIT\nApple Beats & W1/H1 Hardware Management Module"
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
@@ -969,7 +988,7 @@ Panel {
 
           Button {
             width: parent.width
-            text: "GitHub / Iletisim"
+            text: "GitHub / Contact"
             iconText: "󰊤"
             bordered: true
             foreground: root.foreground
