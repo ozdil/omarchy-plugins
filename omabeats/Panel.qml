@@ -16,7 +16,8 @@ Panel {
   implicitHeight: button.implicitHeight
 
   // Beats Headphone Hardware State
-  property bool connected: true
+  property bool connected: false
+  property bool showAboutModal: false
   property string modelName: "Beats Fit Pro"
   property string modelId: "beats_fit_pro"
   property string formFactor: "Earbuds"
@@ -31,9 +32,9 @@ Panel {
   property string wiredModel: ""
   readonly property bool isBothCharging: (root.chargingLeft && root.chargingRight && !root.inEarLeft && !root.inEarRight)
 
-  property int batteryLeft: 95
+  property int batteryLeft: -1
   property bool chargingLeft: false
-  property int batteryRight: 93
+  property int batteryRight: -1
   property bool chargingRight: false
   property int batteryCase: -1
   property bool chargingCase: false
@@ -48,6 +49,8 @@ Panel {
   property string micMode: "Auto"
   property bool autoPauseEnabled: true
   property string codec: "AAC"
+  property string spatialMode: "off"
+  property string eqProfile: "Flat"
   property int rssi: -60
   property string mac: "04:9D:05:DD:08:62"
 
@@ -122,6 +125,8 @@ Panel {
             root.noiseLevel = (mLower.indexOf("noise") !== -1 || mLower.indexOf("anc") !== -1) ? 0 : (mLower.indexOf("off") !== -1 ? 50 : 100)
           }
           if (d.codec) root.codec = String(d.codec)
+          if (d.spatial_audio_mode) root.spatialMode = String(d.spatial_audio_mode)
+          if (d.eq_profile) root.eqProfile = String(d.eq_profile)
           if (d.rssi !== undefined) root.rssi = Number(d.rssi)
           if (d.mac) root.mac = String(d.mac)
           if (d.auto_pause_enabled !== undefined) root.autoPauseEnabled = !!d.auto_pause_enabled
@@ -129,7 +134,7 @@ Panel {
           root.connectionType = String(d.connection_type || "")
           root.wiredModel = String(d.wired_model || "")
 
-          if (!root.connected || root.isBothCharging) {
+          if (root.isBothCharging) {
             if (root.opened) root.close()
           }
         } catch (e) {
@@ -170,10 +175,10 @@ Panel {
     fontFamily: root.fontFamily
     foreground: bar ? bar.foreground : root.foreground
     tooltipText: root.isBothCharging
-                 ? ("OmaBeats: " + root.modelName + " (Kutuda Sarj Oluyor)")
+                 ? ("OmaBeats: " + root.modelName + " (Charging in Case)")
                  : (root.connected
-                    ? ("OmaBeats: " + root.modelName + (root.isWired ? " (Kablolu)" : (root.batteryLeft >= 0 ? (" (" + root.batteryLeft + "%)") : " (Bagli)")))
-                    : "OmaBeats: Bagli Degil")
+                    ? ("OmaBeats: " + root.modelName + (root.isWired ? " (Wired)" : (root.batteryLeft >= 0 ? (" (" + root.batteryLeft + "%)") : " (Connected)")))
+                    : "OmaBeats: Disconnected")
     onPressed: function(b) {
       if (root.opened) root.close()
       else root.open()
@@ -223,10 +228,10 @@ Panel {
               width: parent.width
               title: root.modelName
               meta: root.isBothCharging
-                    ? "KUTUDA SARJ OLUYOR · BEKLEMEDE"
+                    ? "CHARGING IN CASE · STANDBY"
                     : (root.connected
-                       ? ((root.isWired ? "KABLOLU · " : "BAGLI · ") + root.codec + (!root.isWired && root.rssi !== 0 ? (" · " + root.rssi + " dBm") : ""))
-                       : "BAGLANTI YOK")
+                       ? ((root.isWired ? "WIRED · " : "CONNECTED · ") + root.codec + (!root.isWired && root.rssi !== 0 ? (" · " + root.rssi + " dBm") : ""))
+                       : "NOT CONNECTED")
               foreground: root.foreground
               fontFamily: root.fontFamily
               iconComponent: Component {
@@ -292,7 +297,7 @@ Panel {
               }
 
               Text {
-                text: root.connectionType !== "" ? root.connectionType : "Kablolu Baglanti (Kesintisiz Guc)"
+                text: root.connectionType !== "" ? root.connectionType : "Wired Connection (Continuous Power)"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -652,7 +657,93 @@ Panel {
             }
           }
 
-          // 5. In-Ear Detection & Auto-Pause Toggle
+          // 5. Spatial Audio (Uzamsal Ses / Dolby Atmos & Apple Spatial Stage)
+          PanelSeparator {
+            foreground: root.foreground
+          }
+
+          PanelSectionHeader {
+            text: "SPATIAL AUDIO (UZAMSAL SES)"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+
+          Row {
+            width: parent.width
+            spacing: Style.space(6)
+
+            readonly property var spatialPresets: [
+              { label: "Off", id: "off", icon: "󰝟" },
+              { label: "Cinema Dolby", id: "cinema", icon: "󰿎" },
+              { label: "Music Stage", id: "music", icon: "󰎆" }
+            ]
+
+            Repeater {
+              model: parent.spatialPresets
+
+              delegate: Button {
+                required property var modelData
+                width: Math.floor((parent.width - 2 * Style.space(6)) / 3)
+                text: modelData.label
+                iconText: modelData.icon
+                bordered: true
+                horizontalPadding: Style.space(4)
+                selected: root.spatialMode === modelData.id
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.caption
+                onClicked: {
+                  root.spatialMode = modelData.id
+                  root.runEngineCommand(["spatial", modelData.id])
+                }
+              }
+            }
+          }
+
+          // 6. Equalizer Profiles (EQ)
+          PanelSeparator {
+            foreground: root.foreground
+          }
+
+          PanelSectionHeader {
+            text: "EQUALIZER PROFILES"
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+          }
+
+          Flow {
+            width: parent.width
+            spacing: Style.space(6)
+
+            readonly property var eqPresets: [
+              { label: "Beats Signature", id: "Beats Signature" },
+              { label: "Bass Boost", id: "Bass Boost" },
+              { label: "Vocal Clarity", id: "Vocal Clarity" },
+              { label: "Flat", id: "Flat" }
+            ]
+
+            Repeater {
+              model: parent.eqPresets
+
+              delegate: Button {
+                required property var modelData
+                text: modelData.label
+                bordered: true
+                selected: root.eqProfile === modelData.id
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.caption
+                onClicked: {
+                  root.eqProfile = modelData.id
+                  root.runEngineCommand(["eq", modelData.id])
+                }
+              }
+            }
+          }
+
+          // 7. In-Ear Detection & Auto-Pause Toggle
           PanelSeparator {
             foreground: root.foreground
             visible: root.hasInEar
@@ -725,7 +816,7 @@ Panel {
           }
 
           PanelSectionHeader {
-            text: "KABLOLU BEATS PROFILI"
+            text: "WIRED BEATS PROFILE"
             foreground: root.foreground
             fontFamily: root.fontFamily
           }
@@ -778,7 +869,20 @@ Panel {
             Row {
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
-              spacing: Style.space(6)
+              spacing: Style.space(8)
+
+              Button {
+                text: "About"
+                iconText: "󰋽"
+                bordered: true
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+                fontSize: Style.font.caption
+                onClicked: {
+                  root.showAboutModal = !root.showAboutModal
+                }
+              }
 
               Text {
                 text: "MAC: " + root.mac
@@ -802,6 +906,89 @@ Panel {
               fontSize: Style.font.caption
               onClicked: root.refresh()
             }
+          }
+        }
+      }
+
+      // About & Imprint Modal Overlay
+      Rectangle {
+        id: aboutOverlay
+        anchors.fill: parent
+        visible: root.showAboutModal
+        color: Qt.rgba(0.05, 0.05, 0.07, 0.96)
+        z: 99
+
+        MouseArea {
+          anchors.fill: parent
+          // Block underlying clicks
+        }
+
+        Column {
+          anchors.centerIn: parent
+          width: parent.width - Style.space(40)
+          spacing: Style.space(12)
+
+          Row {
+            width: parent.width
+            Item {
+              width: parent.width - closeAboutBtn.implicitWidth
+              implicitHeight: aboutTitleText.implicitHeight
+              Text {
+                id: aboutTitleText
+                text: "OmaBeats"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+            }
+
+            Button {
+              id: closeAboutBtn
+              text: "✕"
+              bordered: true
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              fontSize: Style.font.caption
+              onClicked: root.showAboutModal = false
+            }
+          }
+
+          Text {
+            text: "Surum: 1.1.0\nGelistirici: Ozan Ozdil (@ozdil)\nLisans: MIT\nApple Beats ve W1/H1 Donanim Yonetim Modulu"
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            lineHeight: 1.3
+          }
+
+          PanelSeparator {
+            width: parent.width
+            foreground: root.foreground
+          }
+
+          Button {
+            width: parent.width
+            text: "GitHub / Iletisim"
+            iconText: "󰊤"
+            bordered: true
+            foreground: root.foreground
+            accent: root.accent
+            fontFamily: root.fontFamily
+            fontSize: Style.font.caption
+            onClicked: Qt.openUrlExternally("https://github.com/ozdil")
+          }
+
+          Button {
+            width: parent.width
+            text: "Buy Me a Coffee"
+            iconText: "󰅖"
+            bordered: true
+            foreground: "#000000"
+            color: "#FFDD00"
+            fontFamily: root.fontFamily
+            fontSize: Style.font.caption
+            onClicked: Qt.openUrlExternally("https://buymeacoffee.com/ozdil")
           }
         }
       }
