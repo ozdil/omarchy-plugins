@@ -11,6 +11,7 @@
 [![Engine: Rust](https://img.shields.io/badge/Engine-Rust%202021%20%28PipeWire%20%2B%20BlueZ%29-dea584.svg)](Cargo.toml)
 [![UI: Quickshell](https://img.shields.io/badge/UI-Quickshell%20%7C%20Qt%206-41cd52.svg)](qml/)
 [![Security: Zero--Trust SO_PEERCRED](https://img.shields.io/badge/Security-Zero--Trust%20SO__PEERCRED%20Mode%200600-brightgreen.svg)](CONTRIBUTING.md)
+[![Omarchy Verified Plugin](https://img.shields.io/badge/Omarchy-Verified_Plugin-22c55e?style=for-the-badge&logo=omarchy)](https://github.com/ozdil)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-Support_Development-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/ozdil)
 
 ---
