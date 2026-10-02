@@ -15,9 +15,30 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
-  // Beats Headphone Hardware State
   property bool connected: false
   property bool showAboutModal: false
+  readonly property string manifestPath: Qt.resolvedUrl("manifest.json").toString().replace(/^file:\/\//, "")
+  readonly property string manifestFallbackPath: (Quickshell.env("HOME") || "/home/ozdil") + "/.config/omarchy/plugins/ozdil.omabeats/manifest.json"
+
+  property string pluginName: "OmaBeats"
+  property string pluginVersion: "1.2.1"
+  property string pluginDescription: "Hardware-level Apple Beats & AirPods audio studio, L2CAP AAP daemon, ANC/Transparency control, tri-battery telemetry, and PipeWire DSP equalizer."
+  property string pluginAuthor: "Ozan Özdil (ozdil)"
+  property string pluginLicense: "MIT"
+  property bool pluginVerified: true
+
+  function loadManifest(rawJson) {
+    try {
+      if (!rawJson || String(rawJson).trim() === "") return
+      var parsed = JSON.parse(rawJson)
+      if (parsed.name) root.pluginName = parsed.name
+      if (parsed.version) root.pluginVersion = parsed.version
+      if (parsed.description) root.pluginDescription = parsed.description
+      if (parsed.author) root.pluginAuthor = parsed.author
+      if (parsed.license) root.pluginLicense = parsed.license
+      if (parsed.verified !== undefined) root.pluginVerified = Boolean(parsed.verified)
+    } catch(e) {}
+  }
   property string modelName: "Beats Fit Pro"
   property string modelId: "beats_fit_pro"
   property string formFactor: "Earbuds"
@@ -163,6 +184,29 @@ Panel {
     running: true
     repeat: true
     onTriggered: root.refresh()
+  }
+
+  FileView {
+    id: manifestWatcher
+    path: root.manifestPath
+    watchChanges: true
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadManifest(text())
+    onLoadFailed: {
+      manifestFallbackWatcher.reload()
+    }
+    onFileChanged: reload()
+  }
+
+  FileView {
+    id: manifestFallbackWatcher
+    path: root.manifestFallbackPath
+    watchChanges: true
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadManifest(text())
+    onFileChanged: reload()
   }
 
   // --- Top Bar Icon Button ---
@@ -952,13 +996,40 @@ Panel {
             Item {
               width: parent.width - closeAboutBtn.implicitWidth
               implicitHeight: aboutTitleText.implicitHeight
-              Text {
-                id: aboutTitleText
-                text: "OmaBeats"
-                color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.title
-                font.bold: true
+
+              Row {
+                spacing: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                  id: aboutTitleText
+                  text: root.pluginName
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.title
+                  font.bold: true
+                }
+
+                Rectangle {
+                  visible: root.pluginVerified
+                  implicitWidth: verifBadgeText.implicitWidth + Style.space(8)
+                  implicitHeight: Style.space(18)
+                  radius: Style.space(4)
+                  color: Qt.rgba(0.13, 0.77, 0.37, 0.18)
+                  border.color: "#22c55e"
+                  border.width: 1
+                  anchors.verticalCenter: parent.verticalCenter
+
+                  Text {
+                    id: verifBadgeText
+                    anchors.centerIn: parent
+                    text: "VERIFIED"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption - 2
+                    font.bold: true
+                    color: "#22c55e"
+                  }
+                }
               }
             }
 
@@ -974,8 +1045,11 @@ Panel {
           }
 
           Text {
-            text: "Version: 1.1.0\nDeveloper: Ozan Ozdil (@ozdil)\nLicense: MIT\nApple Beats & W1/H1 Hardware Management Module"
-            color: root.dim
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "Sürüm: " + root.pluginVersion + "\nGeliştirici: " + root.pluginAuthor + "\nLisans: " + root.pluginLicense + "\n\n" + root.pluginDescription
+            color: root.foreground
+            opacity: 0.85
             font.family: root.fontFamily
             font.pixelSize: Style.font.caption
             lineHeight: 1.3

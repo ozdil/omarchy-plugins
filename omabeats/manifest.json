@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ozdil.omabeats",
   "name": "OmaBeats",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Ozan Özdil (ozdil)",
   "license": "MIT",
   "description": "Hardware-level Apple Beats & AirPods audio studio, L2CAP AAP daemon, ANC/Transparency control, tri-battery telemetry, and PipeWire DSP equalizer.",
